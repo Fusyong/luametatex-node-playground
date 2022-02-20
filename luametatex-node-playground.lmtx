@@ -1,0 +1,395 @@
+% 中文配置
+\mainlanguage[cn]
+\language[cn]
+% \enableregime[utf]
+\setscript[hanzi] % 汉字断行
+
+% 汉字字体配置
+\usetypescriptfile[mscore]
+\usebodyfont   [mschinese,12pt]
+% \usebodyfont   [mschinese-light,12pt]
+% \setupbodyfont [mschinese-literate,12pt]
+% \usebodyfont   [mschinese-literate,12pt]
+% \definebodyfontenvironment[24pt]
+% \definebodyfontenvironment[18pt]
+
+% 定义字体
+% \definefont[kaiti][name:kaiti*default at 24pt]
+
+% 配置页码、结构序号等为汉字
+% \setuppagenumber [numberconversion=cn]
+% \definestructureconversionset[chinese][numbers][cn]
+% \setupheads [sectionconversionset=chinese]
+
+% 配置章节格式
+% \define[2]\ChineseChapter{第#1章 #2}
+% \setuphead[chapter][command=\ChineseChapter,style={\bf\switchtobodyfont[24pt]}]
+% \setuphead[section][style={\bf\switchtobodyfont[18pt]}]
+
+\setuppagenumbering[state=start,
+    alternative=singlesided,
+    location={footer, center},
+    style={\bf\switchtobodyfont[11pt]}
+]
+
+% 目录
+\setupcombinedlist[content][
+    list={chapter,section,subsection,subsubsection}, 
+    alternative=c,
+]
+
+\setupinteraction[state=start,focus=width]
+\placebookmarks[all]
+
+% 使用中文标点压缩模块
+% \usemodule[zhspuncs]
+
+% 行距
+\setupinterlinespace[line=1.5em]
+
+% 显式视觉调试信息
+% \showboxes
+% \showmakeup
+
+% 导入模块
+% \directlua{require("luametatex-node-playground.lua")}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\starttext
+
+\title{目录}
+% \completecontent % with title
+\placecontent % without title
+
+\chapter{说明}
+
+本项目的目的在于探索LuaTeX的基本数据结构——结点（node）。实际的运行环境是LuaMetaTex(LuaTeX的后继者，简称LMTX)和ConTeXt。
+
+
+\startitemize
+\item 安装ConTeXt LMTX
+\item 运行`context luametatex-node-playground.lmtx`，编译
+\item 如果控制台输出汉字乱码，可用命令`chcp 65001`临时改变代码页
+\item 观察控制台和pdf输出
+\item play `luametatex-node-playground.lmtx` 并编译
+\item 观察并 play again, and on and on
+\stopitemize
+
+\chapter{结点的utf、序列化、id、计数}
+
+\setbox0 = \hbox{ab\hbox{c}}
+
+\startluacode
+n = tex.box[0]
+
+context([[\type{n=\hbox{abc\hbox{d}}}]])
+context([[\\-- nodes.toutf()把当前结点后(包括嵌套中)所有字模结点/字符结点转换成utf：]])
+context([[\\- nodes.toutf(n):\\]])
+context(nodes.toutf(n))
+context([[\\- nodes.toutf(n.head):\\]])
+context(nodes.toutf(n.head))
+context([[\\- nodes.toutf(n.head.next):\\]])
+context(nodes.toutf(n.head.next))
+context([[\\- nodes.toutf(n.head.next.next):\\]])
+context(nodes.toutf(n.head.next.next))
+
+context([[\\\\-- nodes.listtoutf()把当前结点后列表本级（不含嵌套中）结点转换成utf：]])
+context([[\\- nodes.listtoutf(n):\\]])
+context(nodes.listtoutf(n))
+context([[\\- nodes.listtoutf(n.head):\\]])
+context(nodes.listtoutf(n.head))
+context([[\\- nodes.listtoutf(n.head.next):\\]])
+context(nodes.listtoutf(n.head.next))
+context([[\\- nodes.listtoutf(n.head.next.next):\\]])
+context(nodes.listtoutf(n.head.next.next))
+
+context([[\\\\-- nodes.tosequence()把当前结点后列表本级（不含嵌套中）结点序列化:]])
+context([[\\- nodes.tosequence(n):\\]])
+context(nodes.tosequence(n))
+context([[\\- nodes.tosequence(n.head):\\]])
+context(nodes.tosequence(n.head))
+context([[\\- nodes.tosequence(n.head.next):\\]])
+context(nodes.tosequence(n.head.next))
+context([[\\- nodes.tosequence(n.head.next.next):\\]])
+context(nodes.tosequence(n.head.next.next))
+
+context([[\\\\-- nodes.idstostring()本结点以后结点id转文本（同id合并）:\\]])
+context(nodes.idstostring(n))
+context([[\\]])
+context(nodes.idstostring(n.head))
+
+context([[\\\\-- 本节点以后结点计数(包括嵌套中):\\]])
+context(nodes.countall(n))
+context([[\\]])
+context(nodes.countall(n.head))
+
+context([[\\-- 结点id与类型名称互转:\\]])
+context(node.type(0))
+context([[\\]])
+context(node.id("hlist"))
+\stopluacode
+
+\chapter{遍历结点}
+
+\section {node.traverse()遍历结点}
+
+\startluacode
+
+print([[-----node.traverse()-----]])
+for t in node.traverse(n.head) do
+    print(nodes.listtoutf(t))
+    print(t) -- 信息更丰富
+end
+
+\stopluacode
+
+控制台输出：
+
+\starttyping
+-----node.traverse()-----
+ab[-]
+<node :    nil <=   7598 =>   7586 : glyph unset>
+b[-]
+<node :   7598 <=   7586 =>   4110 : glyph unset>
+[-]
+<node :   7586 <=   4110 =>    nil : hlist box>
+\stoptyping
+
+\section {node.traverse_id()遍历特定类型/id的结点}
+
+\startluacode
+
+print([[-----node.traverse_id()-----]])
+local glyph = nodes.nodecodes.glyph
+for t in node.traverse_id(glyph, n.head) do
+    print(nodes.listtoutf(t))
+    print(t) -- 信息更丰富
+end
+
+\stopluacode
+
+控制台输出：
+
+\starttyping
+-----node.traverse_id()-----
+ab[-]
+<node :    nil <=   8688 =>   8676 : glyph unset>
+b[-]
+<node :   8688 <=   8676 =>   5703 : glyph unset>
+\stoptyping
+
+\section {用n.netx遍历结点}
+
+\startluacode
+local n = n.head
+    while n do
+        context(nodes.tosequence(n))
+        context.par()
+        n = n.next
+    end
+\stopluacode
+
+{\it 这个方法的优点在于，可以在遍历过程中增删结点，如果在`node.traverse_id()`和`node.traverse_id()`过程中增删则会导致引用混乱。}
+
+\chapter{打印结点详细信息}
+
+\startluacode
+
+    for n in node.traverse(n.head) do
+        print([[----nodes.tosequence(n)----]])
+        print(nodes.tosequence(n))
+        n_fields = node.fields(n.id)
+        if n_fields then
+                print([[----k, v, n[v]----]])
+            for k, v in pairs(n_fields) do
+                print(k, v, n[v])
+            end
+        end
+    end
+
+\stopluacode
+
+\starttyping
+----nodes.tosequence(n)----
+U+0061:a U+0062:b hlist
+----k, v, n[v]----
+1       id      28
+2       subtype 32768
+3       attr    <node :    nil <=   7042 =>   6905 : attribute list>
+4       char    97
+5       font    1
+6       language        56
+7       lhmin   2
+8       rhmin   2
+9       uchyph  1
+10      state   0
+11      left    0
+12      right   0
+13      xoffset 0
+14      yoffset 0
+15      xscale  1000
+16      yscale  1000
+17      width   319116
+18      height  313614
+19      depth   12576
+20      total   326190
+21      expansion       0
+22      data    0
+23      script  1
+24      hyphenate       499519
+25      options 128
+0       next    <node :   2543 <=   2335 =>   7538 : glyph unset>
+-1      prev    nil
+----nodes.tosequence(n)----
+U+0062:b hlist
+----k, v, n[v]----
+1       id      28
+2       subtype 32768
+3       attr    <node :    nil <=   7042 =>   6905 : attribute list>
+4       char    98
+5       font    1
+6       language        56
+7       lhmin   2
+8       rhmin   2
+9       uchyph  1
+10      state   0
+11      left    0
+12      right   0
+13      xoffset 0
+14      yoffset 0
+15      xscale  1000
+16      yscale  1000
+17      width   400860
+18      height  518760
+19      depth   16506
+20      total   535266
+21      expansion       0
+22      data    0
+23      script  1
+24      hyphenate       499519
+25      options 128
+0       next    <node :   2335 <=   7538 =>    nil : hlist box>
+-1      prev    <node :    nil <=   2543 =>   2335 : glyph unset>
+----nodes.tosequence(n)----
+hlist
+----k, v, n[v]----
+1       id      0
+2       subtype 2
+3       attr    <node :    nil <=   7042 =>   6905 : attribute list>
+4       width   327762
+5       depth   12576
+6       height  313614
+7       direction       0
+8       shift   0
+9       glueorder       0
+10      gluesign        0
+11      glueset 0.0
+12      list    <node :    nil <=   2915 =>    nil : glyph unset>
+13      orientation     0
+14      source  0
+15      target  0
+16      woffset 0
+17      hoffset 0
+18      doffset 0
+19      xoffset 0
+20      yoffset 0
+21      state   1
+22      class   nil
+0       next    nil
+-1      prev    <node :   2543 <=   2335 =>   7538 : glyph unset>
+\stoptyping
+
+        
+\chapter{打印结点字体信息}
+
+\startluacode
+local n = n.head
+print(nodes.tosequence(n))
+print(fonts.hashes.identifiers[n.font].properties.filename)
+
+-- 打印结点n的字体描述信息
+local fonthashes = fonts.hashes
+local font_id_table = fonthashes.identifiers
+
+-- 打印结点字模描述信息
+desc = font_id_table[n.font].descriptions[n.char]
+print ([[::::::n.char font desc:::::]])
+for i, v in pairs(desc) do
+    print(i,v)
+end
+print ([[:::::BoundingBox:::::]])
+for i, k in pairs (desc.boundingbox) do
+    -- 以基线左点为原点，依次是x1、y1，x2、y2
+    print (i,k)
+end
+
+\stopluacode
+
+控制台输出：
+\starttyping
+U+0061:a U+0062:b hlist
+c:/windows/fonts/stsong.ttf
+::::::n.char font desc:::::
+depth   16
+vheight 1301
+unicode 97
+height  399
+width   406
+tsb     587
+boundingbox     table: 000005b8777200c0
+index   68
+:::::BoundingBox:::::
+1       43
+2       -16
+3       412
+4       399
+\stoptyping
+
+\chapter{在回调中遍历结点}
+
+{\bf 脚本：}
+
+\starttyping
+a\hbox{b\hbox{c}}\hbox{d\hbox{e}}f
+
+A\hbox{B\hbox{C}}\hbox{D\hbox{E}}F
+\stoptyping
+
+{\bf 排版：}
+
+\startluacode
+userdata = userdata or {}
+local glyphs = nodes.nodecodes.glyph -- node.id("glyph")
+function userdata.processmystuff(head)
+    context(nodes.tosequence(head))
+    context.par()
+    return head, true
+end
+
+--把`userdata.processmystuff`函数挂载到processors回调的normalizers类别中。
+nodes.tasks.appendaction("processors", "after", "userdata.processmystuff")
+--停用
+--nodes.tasks.disableaction("processors", "userdata.processmystuff")
+-- 启用
+-- nodes.tasks.enableaction("processors", "userdata.processmystuff")
+\stopluacode
+
+a\hbox{b\hbox{c}}\hbox{d\hbox{e}}f
+
+A\hbox{B\hbox{C}}\hbox{D\hbox{E}}F
+
+% 停用
+\directlua{nodes.tasks.disableaction("processors", "userdata.processmystuff")}
+
+{\bf 回调输出}
+
+{\it 从这里可以看出"processors"回调\\
+- 每个结点列表回调一次（每个盒子包含一个结点列表）；\\
+- 从嵌套的最底层开始；\\
+- 从第一个嵌套开始;\\
+- 系统自动注入了段落结点par和首尾胶结点glue：
+}
+
+
+\stoptext
+
