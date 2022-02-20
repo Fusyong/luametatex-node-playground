@@ -51,9 +51,6 @@
 % \showboxes
 % \showmakeup
 
-% 导入模块
-% \directlua{require("luametatex-node-playground.lua")}
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \starttext
 
@@ -61,6 +58,7 @@
 % \completecontent % with title
 \placecontent % without title
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{说明}
 
 本项目的目的在于探索LuaTeX的基本数据结构——结点（node）。实际的运行环境是LuaMetaTex(LuaTeX的后继者，简称LMTX)和ConTeXt。
@@ -75,6 +73,7 @@
 \item 观察并 play again, and on and on
 \stopitemize
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{结点的utf、序列化、id、计数}
 
 \setbox0 = \hbox{ab\hbox{c}}
@@ -129,6 +128,7 @@ context([[\\]])
 context(node.id("hlist"))
 \stopluacode
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{遍历结点}
 
 \section {node.traverse()遍历结点}
@@ -191,6 +191,7 @@ local n = n.head
 
 {\it 这个方法的优点在于，可以在遍历过程中增删结点，如果在`node.traverse_id()`和`node.traverse_id()`过程中增删则会导致引用混乱。}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 \chapter{打印结点详细信息}
 
 \startluacode
@@ -299,7 +300,7 @@ hlist
 -1      prev    <node :   2543 <=   2335 =>   7538 : glyph unset>
 \stoptyping
 
-        
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 \chapter{打印结点字体信息}
 
 \startluacode
@@ -345,6 +346,7 @@ index   68
 4       399
 \stoptyping
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 \chapter{在回调中遍历结点}
 
 {\bf 脚本：}
@@ -368,17 +370,13 @@ end
 
 --把`userdata.processmystuff`函数挂载到processors回调的normalizers类别中。
 nodes.tasks.appendaction("processors", "after", "userdata.processmystuff")
---停用
---nodes.tasks.disableaction("processors", "userdata.processmystuff")
--- 启用
--- nodes.tasks.enableaction("processors", "userdata.processmystuff")
 \stopluacode
 
 a\hbox{b\hbox{c}}\hbox{d\hbox{e}}f
 
 A\hbox{B\hbox{C}}\hbox{D\hbox{E}}F
 
-% 停用
+% 停用 (挂在时默认启用 enableaction)
 \directlua{nodes.tasks.disableaction("processors", "userdata.processmystuff")}
 
 {\bf 回调输出}
@@ -389,6 +387,72 @@ A\hbox{B\hbox{C}}\hbox{D\hbox{E}}F
 - 从第一个嵌套开始;\\
 - 系统自动注入了段落结点par和首尾胶结点glue：
 }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+\chapter{增删和旋转汉字结点}
+
+\startluacode
+moduledata = moduledata or {}
+local glyph_id = node.id("glyph")
+
+--判断是不是汉字（是否需要直排）-- 常用的汉字编码范围，还有更多
+local function c_to_vertical(c)
+    return c >= 0x04E00 and c <= 0x09FFF
+end
+
+--需要旋转的标点符号集
+local puncs_to_rotate = {
+    [0x3001] = {0.15, 0.5, 1.0, 0.5},   -- 、
+    [0xFF0C] = {0.15, 0.5, 1.0, 0.3},   -- ，
+    [0x3002] = {0.15, 0.6, 1.0, 0.3},   -- 。
+    [0xFF0E] = {0.15, 0.5, 1.0, 0.5},   -- ．
+    [0xFF1F] = {0.15, 0.5, 1.0, 0.5},   -- ？
+    [0xFF01] = {0.15, 0.5, 1.0, 0.5},   -- ！
+    [0xFF1A] = {0.15, 0.5, 1.0, -0.1},  -- ：
+    [0xFF1B] = {0.15, 0.5, 1.0, 0.5},   -- ；
+}
+
+function moduledata.processmystuff(head)
+    local n = head
+    while n do--for n in node.traverse_id(glyphs, head) do --在遍历中删除会造成会乱
+        if n.id == glyph_id then
+            local n_char = n.char
+            local p_to_rotate = puncs_to_rotate[n_char]
+            if  c_to_vertical(n_char) or p_to_rotate then
+                local l = nodes.new("hlist")
+                l.list =  node.copy(n) --复制结点到新建的结点列表\hbox下
+                local w, h, d, t = n.width, n.height, n.depth, n.total
+                if p_to_rotate then
+                    l.list.data = 10000 --标记，也可以标记在l.list.subtype，只怕有冲突
+                    local pre_space = w * 0.15 --前留白，可以通过boundingbox等信息精确调整
+                    l.width, l.height, l.depth = w, w, 0 --设置尺寸
+                    l.yoffset = w * 0.3 --楷体0.2, 宋体0.3
+                    l.hoffset = h + pre_space
+                else --汉字
+                    l.width, l.height, l.depth = w, w, 0 --设置尺寸
+                    l.yoffset = -w * 0.2 --楷体0.2, 宋体0.3
+                    l.hoffset = h + (w - t) / 2 --两侧平均留空
+                end
+                l.orientation = 0x003 --以基线左端为圆心顺转3*90度，即左转90度
+                head, l = node.insert_after(head, n, l)
+                --删除原结点（注释后如果要观察前后相对关系，并配合\showboxes）
+                head, n = node.remove(head, n)
+            end
+        end
+        n = n.next
+    end
+    return head, true
+end
+
+nodes.tasks.appendaction("processors", "after", "moduledata.processmystuff")
+
+\stopluacode
+
+\dorecurse{5}{%
+《〈庄子〉寓言故事》：『朱泙(pēng)漫学屠龙于支离益，殚(dān)千金之家。三年技成，而无所用其巧！！』{\itxx （——《庄子·列御寇》， p125, f.f.）}【注释】（一）朱、支谐音；泙漫与离益意近，水满而漫溢也．（二）无所用其巧：真的无用吗？怎么可能？？！！当参考他处，以庄解庄。……%
+}
+
+\directlua{nodes.tasks.disableaction("processors", "moduledata.processmystuff")}
 
 
 \stoptext
