@@ -53,25 +53,9 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \starttext
-
 \title{目录}
 % \completecontent % with title
 \placecontent % without title
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\chapter{说明}
-
-本项目的目的在于探索LuaTeX的基本数据结构——结点（node）。实际的运行环境是LuaMetaTex(LuaTeX的后继者，简称LMTX)和ConTeXt。
-
-
-\startitemize
-\item 安装ConTeXt LMTX
-\item 运行`context luametatex-node-playground.lmtx`，编译
-\item 如果控制台输出汉字乱码，可用命令`chcp 65001`临时改变代码页
-\item 观察控制台和pdf输出
-\item play `luametatex-node-playground.lmtx` 并编译
-\item 观察并 play again, and on and on
-\stopitemize
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \chapter{结点的utf、序列化、id、计数}
