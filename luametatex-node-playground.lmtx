@@ -139,13 +139,13 @@ b[-]
 <node :   7586 <=   4110 =>    nil : hlist box>
 \stoptyping
 
-\section {node.traverse_id()遍历特定类型/id的结点}
+\section {node.traverseid()遍历特定类型/id的结点}
 
 \startluacode
 
-print([[-----node.traverse_id()-----]])
+print([[-----node.traverseid()-----]])
 local glyph = nodes.nodecodes.glyph
-for t in node.traverse_id(glyph, n.head) do
+for t in node.traverseid(glyph, n.head) do
     print(nodes.listtoutf(t))
     print(t) -- 信息更丰富
 end
@@ -155,7 +155,7 @@ end
 控制台输出：
 
 \starttyping
------node.traverse_id()-----
+-----node.traverseid()-----
 ab[-]
 <node :    nil <=   8688 =>   8676 : glyph unset>
 b[-]
@@ -173,7 +173,7 @@ local n = n.head
     end
 \stopluacode
 
-{\it 这个方法的优点在于，可以在遍历过程中增删结点，如果在`node.traverse_id()`和`node.traverse_id()`过程中增删则会导致引用混乱。}
+{\it 这个方法的优点在于，可以在遍历过程中增删结点，如果在`node.traverseid()`和`node.traverse_id()`过程中增删则会导致引用混乱。}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 \chapter{打印结点详细信息}
@@ -376,7 +376,7 @@ A\hbox{B\hbox{C}}\hbox{D\hbox{E}}F
 \chapter{增删和旋转汉字结点}
 
 \startluacode
-moduledata = moduledata or {}
+thirddata = thirddata or {}
 local glyph_id = node.id("glyph")
 
 --判断是不是汉字（是否需要直排）-- 常用的汉字编码范围，还有更多
@@ -396,7 +396,7 @@ local puncs_to_rotate = {
     [0xFF1B] = {0.15, 0.5, 1.0, 0.5},   -- ；
 }
 
-function moduledata.processmystuff(head)
+function thirddata.processmystuff(head)
     local n = head
     while n do--for n in node.traverse_id(glyphs, head) do --在遍历中删除会造成会乱
         if n.id == glyph_id then
@@ -418,7 +418,7 @@ function moduledata.processmystuff(head)
                     l.hoffset = h + (w - t) / 2 --两侧平均留空
                 end
                 l.orientation = 0x003 --以基线左端为圆心顺转3*90度，即左转90度
-                head, l = node.insert_after(head, n, l)
+                head, l = node.insertafter(head, n, l)
                 --删除原结点（注释后如果要观察前后相对关系，并配合\showboxes）
                 head, n = node.remove(head, n)
             end
@@ -428,7 +428,7 @@ function moduledata.processmystuff(head)
     return head, true
 end
 
-nodes.tasks.appendaction("processors", "after", "moduledata.processmystuff")
+nodes.tasks.appendaction("processors", "after", "thirddata.processmystuff")
 
 \stopluacode
 
@@ -436,7 +436,7 @@ nodes.tasks.appendaction("processors", "after", "moduledata.processmystuff")
 《〈庄子〉寓言故事》：『朱泙(pēng)漫学屠龙于支离益，殚(dān)千金之家。三年技成，而无所用其巧！！』{\itxx （——《庄子·列御寇》， p125, f.f.）}【注释】（一）朱、支谐音；泙漫与离益意近，水满而漫溢也．（二）无所用其巧：真的无用吗？怎么可能？？！！当参考他处，以庄解庄。……%
 }
 
-\directlua{nodes.tasks.disableaction("processors", "moduledata.processmystuff")}
+\directlua{nodes.tasks.disableaction("processors", "thirddata.processmystuff")}
 
 
 \stoptext

@@ -1,0 +1,24 @@
+% Insert spaces between Chinese characters and non-Chinese characters
+
+\mainlanguage[cn]
+\language[cn]
+\setscript[hanzi]
+\usetypescriptfile[mscore]
+\usebodyfont   [mschinese,12pt]
+
+\startluacode
+Thirddata = Thirddata or {}
+
+function Thirddata.insertspaces(head)
+    inspect(head)
+    return head, true
+end
+
+nodes.tasks.appendaction("processors", "before", "Thirddata.insertspaces")
+
+\stopluacode
+\starttext
+
+今天出去买菜花了5000元。
+
+\stoptext

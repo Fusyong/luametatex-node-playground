@@ -1,2 +1,22 @@
-/luametatex-node-playground.log
-/luametatex-node-playground.tuc
+# System and IDE files
+Thumbs.db
+.DS_Store
+.idea
+.vscode
+*.suo
+*.sublime-project
+*.sublime-workspace
+# ah21
+.gitignore
+*.code-workspace
+*.log
+*.tuc
+*.pdf
+
+# Vendors
+node_modules/
+
+# Build
+/npm-debug.log
+build/
+out/

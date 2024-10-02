@@ -1,0 +1,33 @@
+% from https://www.mail-archive.com/ntg-context@ntg.nl/msg103474.html
+% by Max
+
+\starttext
+\startluacode
+local a = node.new"glyph"
+a.char = string.byte("a")
+a.font = font.current()
+
+local b = node.new"glyph"
+b.char = string.byte("b")
+b.font = font.current()
+
+local c = node.new"glyph"
+c.char = string.byte("c")
+c.font = font.current()
+
+local hss = node.new("glue")
+hss.stretch = 65536
+hss.stretchorder = 2
+hss.shrink = 65536
+hss.shrinkorder = 2
+hss.width = 0
+
+local box = node.hpack(hss + b, "exactly", 0)
+box.shift = -tex.sp("1ex")
+
+tex.forcehmode()
+a.next = box
+box.next = c
+node.write(a)
+\stopluacode
+\stoptext
