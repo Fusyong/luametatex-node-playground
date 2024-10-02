@@ -1,4 +1,5 @@
-% Insert spaces between Chinese characters and non-Chinese characters
+% a preliminary solution for inserting spaces between Chinese 
+% characters and non-Chinese characters
 
 \mainlanguage[cn]
 \language[cn]
@@ -6,19 +7,66 @@
 \usetypescriptfile[mscore]
 \usebodyfont   [mschinese,12pt]
 
+\showglyphs
+
 \startluacode
 Thirddata = Thirddata or {}
 
-function Thirddata.insertspaces(head)
-    inspect(head)
-    return head, true
+local glyph_id = nodes.nodecodes.glyph
+local node_insertbefore = node.insertbefore
+local node_insertafter = node.insertafter
+local node_new = node.new
+local tex_sp = tex.sp
+
+local function ischinesechar(c)
+    -- for more ranges:
+    -- https://wiki.contextgarden.net/List_of_Unicode_blocks
+    return (c >= 0x04E00 and c <= 0x09FFF)
+        or (c >= 0x03400 and c <= 0x04DBF)
+        or (c >= 0x20000 and c <= 0x2A6DF)
 end
 
-nodes.tasks.appendaction("processors", "before", "Thirddata.insertspaces")
+function Thirddata.processmystuff(head)
+    local n = head
+    while n do
+        if n.id == glyph_id and ischinesechar(n.char) then
+
+            local n_prev = n.prev
+            if n_prev
+                and n_prev.id == glyph_id
+                and not ischinesechar(n_prev.char)
+                then
+            local glue = node_new("glue")
+            glue.width = tex_sp("0.25em")
+            glue.stretch = tex_sp("0.25em")
+            print("insert space before:", utf8.char(n.char))
+            head, glue = node_insertbefore(head, n, glue)
+            end
+
+            local n_next = n.next
+            if n_next
+                and n_next.id == glyph_id
+                and not ischinesechar(n_next.char)
+                then
+            local glue = node_new("glue")
+            glue.width = tex_sp("0.25em")
+            glue.stretch = tex_sp("0.25em")
+            print("insert space after:", utf8.char(n.char))
+            head, glue = node_insertafter(head, n, glue)
+            n = glue.next
+            end
+        end
+        n = n.next
+    end
+    return head, done
+end
+
+nodes.tasks.appendaction("processors", "after", "Thirddata.processmystuff")
+
 
 \stopluacode
 \starttext
-
 今天出去买菜花了5000元。
 
+新MacBook Pro有15\%的CPU性能提升。
 \stoptext
